@@ -1,5 +1,7 @@
 ## Fulcrum Photo Importer
 
+This program takes a list of photo files as input and uploads them to your Fulcrum account.
+
 ### Setup
 
 ```sh
