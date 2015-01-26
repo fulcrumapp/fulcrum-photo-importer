@@ -24,23 +24,26 @@ class Import < Thor
     photos = []
 
     CSV.foreach(options[:file]) do |row|
-      photos << row[0]
+      photos << [row[0], row[1] || row[0]]
     end
 
-    photos.each_with_index do |photo_file, index|
+    photos.each_with_index do |photo_attributes, index|
       line = index + 1
 
+      photo_id = photo_attributes[0]
+      photo_file_name = photo_attributes[1]
+
       if index < options[:skip]
-        log line, "#{'Skipping'.red} #{photo_file}"
+        log line, "#{'Skipping'.red} #{photo_id}"
         next
       end
 
-      if File.exist?(photo_file)
+      if File.exist?(photo_file_name)
         # absolute path
-        file_path = photo_file
+        file_path = photo_file_name
       else
         # file name relative to input csv file
-        file_path = File.join(file_root, photo_file)
+        file_path = File.join(file_root, photo_file_name)
       end
 
       if !File.exist?(file_path)
@@ -48,12 +51,18 @@ class Import < Thor
         next
       end
 
-      id = File.basename(file_path, '.*')
-      id = SecureRandom.uuid unless id =~ VALID_UUID
+      if photo_id =~ /\.jpg/
+        photo_id = File.basename(photo_id, '.*')
+      end
 
-      log line, "#{'Creating'.green} #{photo_file}"
+      unless photo_id =~ VALID_UUID
+        log line, "#{'Skipping'.red} #{photo_file} because it has an invalid ID #{photo_id}"
+        next
+      end
 
-      client.photos.create(file_path, 'image/jpeg', access_key: id)
+      log line, "#{'Creating'.green} #{photo_id} from #{file_path}"
+
+      client.photos.create(file_path, 'image/jpeg', access_key: photo_id)
     end
   end
 
